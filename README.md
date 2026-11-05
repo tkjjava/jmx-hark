@@ -1,12 +1,34 @@
 # hark-bridge
 
-> 作者：**君莫笑**
->
-> **永恒之兰**
->
-> MIT License
+<p align="center">
+  <img alt="version" src="https://img.shields.io/badge/version-0.1.0-blue">
+  <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-3776AB">
+  <img alt="tests" src="https://img.shields.io/badge/tests-59%20passed-brightgreen">
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="no registration" src="https://img.shields.io/badge/registration-none-critical">
+</p>
+
+<p align="center">
+  <b>把 Hark 账号池暴露成标准 OpenAI 兼容接口</b><br>
+  <sub>作者：君莫笑 · 永恒之兰</sub>
+</p>
+
+---
 
 把 Hark 账号池暴露成标准 OpenAI 兼容接口。**不含注册环节**——会话由你自己在浏览器里登录后导入。
+
+## 特性
+
+| | |
+|---|---|
+| **OpenAI 兼容** | `/v1/chat/completions`（含 SSE 流式）、`/v1/models` |
+| **会话判定严格** | 以 `get-session` 为唯一依据，偏好 Cookie 一律拒绝 |
+| **Token 自动续期** | 收下 `Set-Cookie` 并回写库，不放弃每一次续期机会 |
+| **防误清账号** | 200 返回 HTML 是拦截页，不是会话失效，凭据保留 |
+| **三道派单闸门** | 状态 / 探针新鲜度 / 会话有效期，任一不满足就拒绝 |
+| **加密存储** | SQLite + Fernet，密钥缺失直接抛错，不退化成明文 |
+| **自检工具** | `python -m hark_bridge.doctor` 逐项验证环境 |
+| **零注册代码** | 没有任何自动建号、批量注册、邮箱验证实现 |
 
 ## 文档
 
