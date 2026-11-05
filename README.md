@@ -1,9 +1,10 @@
 # hark-bridge
 
 <p align="center">
+  <a href="https://github.com/tkjjava/jmx-hark/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tkjjava/jmx-hark/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <img alt="tests" src="https://img.shields.io/badge/tests-64%20passed-brightgreen">
   <img alt="version" src="https://img.shields.io/badge/version-0.1.0-blue">
   <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-3776AB">
-  <img alt="tests" src="https://img.shields.io/badge/tests-59%20passed-brightgreen">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="no registration" src="https://img.shields.io/badge/registration-none-critical">
 </p>
