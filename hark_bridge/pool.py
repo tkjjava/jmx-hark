@@ -91,11 +91,7 @@ def _is_benched(account: str) -> bool:
 def benched_accounts() -> list[str]:
     """当前处于冷却中的账号（给 /admin/accounts 展示用）。"""
     now = time.monotonic()
-    return [
-        account
-        for account, until in _cooldown.items()
-        if until > now
-    ]
+    return [account for account, until in _cooldown.items() if until > now]
 
 
 async def dispatch(
@@ -111,20 +107,17 @@ async def dispatch(
     每个候选账号只试一次：失败即进冷却，本次请求内不再回头。
     """
     candidates = [
-        record for record in store.dispatchable()
-        if not _is_benched(record.account)
+        record for record in store.dispatchable() if not _is_benched(record.account)
     ]
     if not candidates:
         benched = benched_accounts()
         detail = f"（{len(benched)} 个账号在冷却中）" if benched else ""
-        raise NoAccountAvailable(
-            f"账号池里没有可派单的账号{detail}（需先导入会话）"
-        )
+        raise NoAccountAvailable(f"账号池里没有可派单的账号{detail}（需先导入会话）")
 
     ordered = _round_robin(candidates, _cursor, "dispatch")
     last_error = ""
 
-    for record in ordered[:max(1, max_attempts)]:
+    for record in ordered[: max(1, max_attempts)]:
         account = record.account
 
         created = await call(
@@ -229,12 +222,14 @@ async def collect_text(
         ):
             text = event["text"]
     if not text and reply_mode in ("search", "auto", "history"):
-        text = (await reader.read_reply_search(
-            result.cookies,
-            result.conversation_id,
-            base_url=base_url,
-            transport=transport,
-        )) or ""
+        text = (
+            await reader.read_reply_search(
+                result.cookies,
+                result.conversation_id,
+                base_url=base_url,
+                transport=transport,
+            )
+        ) or ""
     return text
 
 
@@ -266,7 +261,7 @@ async def stream_text(
         ):
             text = event["text"]
             while emitted < len(text):
-                chunk = text[emitted: emitted + 24]
+                chunk = text[emitted : emitted + 24]
                 emitted += len(chunk)
                 yield chunk
                 await asyncio.sleep(0.02)
@@ -280,5 +275,5 @@ async def stream_text(
         )
         if fallback:
             for index in range(0, len(fallback), 24):
-                yield fallback[index: index + 24]
+                yield fallback[index : index + 24]
                 await asyncio.sleep(0.02)

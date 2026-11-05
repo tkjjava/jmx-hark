@@ -92,9 +92,7 @@ def _prompt_of(messages: list[ChatMessage]) -> str:
         content = message.content
         if isinstance(content, list):
             content = "".join(
-                str(item.get("text", ""))
-                for item in content
-                if isinstance(item, dict)
+                str(item.get("text", "")) for item in content if isinstance(item, dict)
             )
         if not content:
             continue
@@ -125,9 +123,7 @@ async def list_models(_: None = Depends(require_key)) -> dict:
 
 
 @app.post("/v1/chat/completions")
-async def chat_completions(
-    request: ChatRequest, _: None = Depends(require_key)
-):
+async def chat_completions(request: ChatRequest, _: None = Depends(require_key)):
     """OpenAI 兼容补全。流式走 SSE，非流式一次性返回。
 
     故意不标注返回类型：JSONResponse 与 StreamingResponse 的联合类型会
@@ -371,7 +367,9 @@ async def reprobe(account: str) -> dict:
         return {"ok": True, "state": state.value}
     store().mark_failure(
         account,
-        state=AccountState.SESSION_EXPIRED if probe.definitive else AccountState.UNVERIFIED,
+        state=AccountState.SESSION_EXPIRED
+        if probe.definitive
+        else AccountState.UNVERIFIED,
         error=probe.note,
         probe_status=probe.upstream_status,
     )

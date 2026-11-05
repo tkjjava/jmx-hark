@@ -85,9 +85,7 @@ class TestStreamTimeout:
 
         started = time.monotonic()
         chunks = []
-        async for delta in pool.stream_text(
-            result, timeout=0.15, transport=transport
-        ):
+        async for delta in pool.stream_text(result, timeout=0.15, transport=transport):
             chunks.append(delta)
 
         elapsed = time.monotonic() - started

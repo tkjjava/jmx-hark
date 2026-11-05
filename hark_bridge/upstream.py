@@ -112,9 +112,7 @@ async def acquire(
             )
             raise NotDispatchable(account, AccountState.UNVERIFIED, "无会话凭据")
 
-        probe = await probe_session(
-            cookies, base_url=base_url, transport=transport
-        )
+        probe = await probe_session(cookies, base_url=base_url, transport=transport)
         if probe.valid:
             state = after_probe(
                 valid=True, now=now, session_expires_at=probe.expires_at

@@ -145,11 +145,13 @@ class AccountStore:
                 session_id,
                 user_id,
                 session_expires_at,
-                now if state in (AccountState.SESSION_VALID, AccountState.SESSION_EXPIRING) else None,
+                now
+                if state in (AccountState.SESSION_VALID, AccountState.SESSION_EXPIRING)
+                else None,
                 probe_status,
                 None,  # last_error
-                now,   # created_at
-                now,   # updated_at
+                now,  # created_at
+                now,  # updated_at
             ),
         )
         self._conn.commit()
@@ -205,9 +207,7 @@ class AccountStore:
         return self._decrypt(row["cookies_enc"]) if row else {}
 
     def list_all(self) -> list[Account]:
-        rows = self._conn.execute(
-            "SELECT * FROM accounts ORDER BY account"
-        ).fetchall()
+        rows = self._conn.execute("SELECT * FROM accounts ORDER BY account").fetchall()
         return [_row_to_account(row) for row in rows]
 
     def dispatchable(self, *, now: int | None = None) -> list[Account]:

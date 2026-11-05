@@ -112,10 +112,7 @@ def pick_reply(
         if (
             isinstance(timestamp, (int, float))
             and timestamp / 1000.0 >= since_ts - 1
-            and (
-                fallback is None
-                or timestamp > (fallback.get("timestamp") or 0)
-            )
+            and (fallback is None or timestamp > (fallback.get("timestamp") or 0))
         ):
             fallback = message
 
@@ -170,7 +167,7 @@ async def poll_reply(
 
         text, finished = pick_reply(messages, sent_message_id, since_ts)
         if text and text != last:
-            delta = text[len(last):] if text.startswith(last) else text
+            delta = text[len(last) :] if text.startswith(last) else text
             last = text
             yield {"text": text, "delta": delta}
             if finished:

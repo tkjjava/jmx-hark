@@ -191,12 +191,8 @@ class TestConnectionPool:
     async def test_shared_client_reused(self):
         """同一 base_url 应复用同一个客户端实例。"""
         await upstream.aclose()
-        first = upstream._client_for(
-            "https://x.invalid", httpx.Timeout(5.0), None
-        )
-        second = upstream._client_for(
-            "https://x.invalid", httpx.Timeout(5.0), None
-        )
+        first = upstream._client_for("https://x.invalid", httpx.Timeout(5.0), None)
+        second = upstream._client_for("https://x.invalid", httpx.Timeout(5.0), None)
         assert first is second
         await upstream.aclose()
 

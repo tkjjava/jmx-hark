@@ -121,13 +121,19 @@ def test_after_probe_marks_expiring_within_warn_window():
 
 def test_expiry_check_downgrades():
     now = int(time.time())
-    assert after_session_expiry_check(
-        AccountState.SESSION_VALID, now=now, session_expires_at=now - 1
-    ) is AccountState.SESSION_EXPIRED
+    assert (
+        after_session_expiry_check(
+            AccountState.SESSION_VALID, now=now, session_expires_at=now - 1
+        )
+        is AccountState.SESSION_EXPIRED
+    )
     # 非派单状态不应被改动
-    assert after_session_expiry_check(
-        AccountState.BLOCKED, now=now, session_expires_at=now - 1
-    ) is AccountState.BLOCKED
+    assert (
+        after_session_expiry_check(
+            AccountState.BLOCKED, now=now, session_expires_at=now - 1
+        )
+        is AccountState.BLOCKED
+    )
 
 
 # ---- 回复挑选 ---------------------------------------------------------
@@ -182,9 +188,7 @@ def test_pick_reply_ignores_user_messages():
 
 
 def test_pick_reply_ignores_empty_content():
-    messages = {
-        "m1": {"role": "assistant", "content": "   ", "timestamp": 9000}
-    }
+    messages = {"m1": {"role": "assistant", "content": "   ", "timestamp": 9000}}
     text, _ = reader.pick_reply(messages, None, 0.0)
     assert text is None
 

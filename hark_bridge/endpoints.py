@@ -57,6 +57,6 @@ def render(path: str, params: Mapping[str, object]) -> str:
     for key, value in params.items():
         rendered = rendered.replace("{" + key + "}", str(value))
     if "{" in rendered and "}" in rendered:
-        missing = rendered[rendered.index("{"): rendered.index("}") + 1]
+        missing = rendered[rendered.index("{") : rendered.index("}") + 1]
         raise ValueError(f"路径缺少参数 {missing}: {path}")
     return rendered

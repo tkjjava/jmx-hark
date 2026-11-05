@@ -37,7 +37,7 @@ DEFAULT_TIMEOUT = httpx.Timeout(connect=10.0, read=20.0, write=10.0, pool=5.0)
 def _bare_cookie_name(name: str) -> str:
     for prefix in ("__Secure-", "__Host-"):
         if name.startswith(prefix):
-            return name[len(prefix):]
+            return name[len(prefix) :]
     return name
 
 
@@ -49,7 +49,9 @@ def is_session_cookie_name(name: str) -> bool:
 
 def filter_session_cookies(cookies: Mapping[str, str]) -> dict[str, str]:
     """只保留会话 token，丢掉偏好 Cookie。"""
-    return {name: value for name, value in cookies.items() if is_session_cookie_name(name)}
+    return {
+        name: value for name, value in cookies.items() if is_session_cookie_name(name)
+    }
 
 
 def has_session_cookie(cookies: Mapping[str, str]) -> bool:
