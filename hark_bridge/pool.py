@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -66,6 +67,36 @@ def _round_robin(accounts: list, cursor: dict[str, int], key: str) -> list:
 
 _cursor: dict[str, int] = {}
 
+# 账号冷却表：account -> 冷却截止时间戳。
+# 作用：一次请求里失败了 A 号，下一个请求不该再去打 A 号。
+# 冷却不影响库里的状态（那是会话层面的判定），只管调度层面的短期避让。
+_cooldown: dict[str, float] = {}
+COOLDOWN_SECONDS = float(os.environ.get("HARK_BRIDGE_COOLDOWN", "60"))
+
+
+def _bench(account: str) -> None:
+    _cooldown[account] = time.monotonic() + COOLDOWN_SECONDS
+
+
+def _is_benched(account: str) -> bool:
+    until = _cooldown.get(account)
+    if until is None:
+        return False
+    if time.monotonic() >= until:
+        _cooldown.pop(account, None)
+        return False
+    return True
+
+
+def benched_accounts() -> list[str]:
+    """当前处于冷却中的账号（给 /admin/accounts 展示用）。"""
+    now = time.monotonic()
+    return [
+        account
+        for account, until in _cooldown.items()
+        if until > now
+    ]
+
 
 async def dispatch(
     store: AccountStore,
@@ -75,10 +106,20 @@ async def dispatch(
     transport: httpx.AsyncBaseTransport | None = None,
     max_attempts: int = 3,
 ) -> DispatchResult:
-    """挑一个可用账号发消息。失败自动换号，最多试 max_attempts 次。"""
-    candidates = store.dispatchable()
+    """挑一个可用账号发消息。失败自动换号，最多试 max_attempts 次。
+
+    每个候选账号只试一次：失败即进冷却，本次请求内不再回头。
+    """
+    candidates = [
+        record for record in store.dispatchable()
+        if not _is_benched(record.account)
+    ]
     if not candidates:
-        raise NoAccountAvailable("账号池里没有可派单的账号（需先导入会话）")
+        benched = benched_accounts()
+        detail = f"（{len(benched)} 个账号在冷却中）" if benched else ""
+        raise NoAccountAvailable(
+            f"账号池里没有可派单的账号{detail}（需先导入会话）"
+        )
 
     ordered = _round_robin(candidates, _cursor, "dispatch")
     last_error = ""
@@ -96,11 +137,13 @@ async def dispatch(
         )
         if not created.ok:
             last_error = f"{account}: 建会话失败 {created.verdict} {created.note}"
+            _bench(account)
             continue
 
         conversation_id = _extract_conversation_id(created.data)
         if not conversation_id:
             last_error = f"{account}: 建会话响应无 conversationId"
+            _bench(account)
             continue
 
         sent = await call(
@@ -114,8 +157,11 @@ async def dispatch(
         )
         if not sent.ok:
             last_error = f"{account}: 发消息失败 {sent.verdict} {sent.note}"
+            _bench(account)
             continue
 
+        # 成功即解除冷却，避免因为早先一次抖动长期不用这个号
+        _cooldown.pop(account, None)
         return DispatchResult(
             ok=True,
             account=account,

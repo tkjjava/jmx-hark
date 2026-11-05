@@ -7,12 +7,13 @@ import os
 import time
 import uuid
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from . import __author__, __mark__, __version__, pool, session
+from . import __author__, __mark__, __version__, pool, session, upstream
 from .state import AccountState, after_probe
 from .store import AccountStore
 
@@ -38,6 +39,18 @@ async def require_key(authorization: str | None = Header(default=None)) -> None:
 
 
 app = FastAPI(title="hark-bridge", version=__version__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """应用生命周期：退出时释放连接池与数据库句柄。"""
+    yield
+    await upstream.aclose()
+    if _store is not None:
+        _store.close()
+
+
+app.router.lifespan_context = lifespan
 
 _store: AccountStore | None = None
 
@@ -339,6 +352,7 @@ async def reprobe(account: str) -> dict:
 async def healthz() -> dict:
     accounts = store().list_all()
     dispatchable = store().dispatchable()
+    benched = pool.benched_accounts()
     return {
         "status": "ok",
         "version": __version__,
@@ -346,6 +360,7 @@ async def healthz() -> dict:
         "mark": __mark__,
         "accounts_total": len(accounts),
         "accounts_dispatchable": len(dispatchable),
+        "accounts_benched": len(benched),
     }
 
 

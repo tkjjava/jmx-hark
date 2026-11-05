@@ -393,6 +393,7 @@ Hark 上游没有真 SSE 推流（或推流路径未确认）。本项目的工�
 | `HARK_BASE` | `https://hark.com` | 上游地址 |
 | `HARK_REPLY_MODE` | `history` | `history` / `search` / `none` |
 | `HARK_REPLY_TIMEOUT` | `120` | 等回复超时（秒） |
+| `HARK_BRIDGE_COOLDOWN` | `60` | 失败账号的冷却秒数 |
 
 ### 回复读取模式
 

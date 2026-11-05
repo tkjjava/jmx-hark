@@ -202,24 +202,32 @@ async def call(
     body = _normalize_body(name, body)
     headers = {"accept": "application/json", **BROWSER_HEADERS}
 
-    async with httpx.AsyncClient(
-        base_url=base_url,
-        timeout=timeout,
-        follow_redirects=False,
-        transport=transport,
-        cookies=cookies,
-    ) as client:
-        try:
+    # 复用连接池：每次请求新建 AsyncClient 会重做 TCP 握手，
+    # 在轮询场景下（每 0.6 秒一次）开销非常可观。
+    #
+    # 注意：cookie 要显式拼成请求头，不能用 client.request(cookies=...)——
+    # httpx 已废弃逐请求 cookies（与连接池复用的语义有歧义）。
+    request_headers = {**headers, "cookie": _cookie_header(cookies)}
+    client = _client_for(base_url, timeout, transport)
+    owns_client = not _is_shared(base_url, transport)
+
+    try:
+        if owns_client:
+            async with client as owned:
+                response = await owned.request(
+                    ep.method, path, headers=request_headers, json=body, params=params
+                )
+        else:
             response = await client.request(
-                ep.method, path, headers=headers, json=body, params=params
+                ep.method, path, headers=request_headers, json=body, params=params
             )
-        except httpx.HTTPError as exc:
-            return CallResult(
-                ok=False,
-                verdict="error",
-                note=f"传输失败: {type(exc).__name__}",
-                endpoint=f"{ep.method} {path}",
-            )
+    except httpx.HTTPError as exc:
+        return CallResult(
+            ok=False,
+            verdict="error",
+            note=f"传输失败: {type(exc).__name__}",
+            endpoint=f"{ep.method} {path}",
+        )
 
     verdict = verdict_for(response.status_code)
     ok = verdict == "ok"
@@ -232,6 +240,14 @@ async def call(
             error=f"上游 {response.status_code}",
             probe_status=response.status_code,
         )
+    elif response.status_code == 429:
+        # 429 是暂时的，不该隔离账号，只做退避冷却
+        store.mark_failure(
+            account,
+            state=AccountState.RATE_LIMITED,
+            error="上游限流",
+            probe_status=429,
+        )
 
     return CallResult(
         ok=ok,
@@ -241,6 +257,70 @@ async def call(
         note="" if ok else f"HTTP {response.status_code} ({verdict})",
         endpoint=f"{ep.method} {path}",
     )
+
+
+def _cookie_header(cookies: dict[str, str]) -> str:
+    """把 cookie 字典拼成 Cookie 头。
+
+    共享连接池时不能逐请求设置 cookie（httpx 已废弃该用法，
+    且与连接复用语义冲突），显式拼头最稳妥。
+    """
+    return "; ".join(f"{name}={value}" for name, value in cookies.items())
+
+
+# ---- 共享连接池 -------------------------------------------------------
+
+_shared_client: httpx.AsyncClient | None = None
+_shared_base: str | None = None
+
+
+def _is_shared(base_url: str, transport: httpx.AsyncBaseTransport | None) -> bool:
+    """只有在没有自定义 transport 时才复用连接池。
+
+    测试注入 MockTransport 时必须各自独立，否则会串数据。
+    """
+    return transport is None
+
+
+def _client_for(
+    base_url: str,
+    timeout: httpx.Timeout,
+    transport: httpx.AsyncBaseTransport | None,
+) -> httpx.AsyncClient:
+    """返回共享客户端或一次性客户端。
+
+    共享客户端的 key 只用 base_url：timeout 每次调用可以不同，
+    但 httpx 客户端本身允许逐请求覆盖 timeout，不必为它重建连接池。
+    （早先版本用 id(timeout) 做 key，对象回收后地址复用会导致误判。）
+    """
+    global _shared_client, _shared_base
+
+    if transport is not None:
+        return httpx.AsyncClient(
+            base_url=base_url,
+            timeout=timeout,
+            follow_redirects=False,
+            transport=transport,
+        )
+
+    if _shared_client is None or _shared_base != base_url:
+        _shared_client = httpx.AsyncClient(
+            base_url=base_url,
+            timeout=timeout,
+            follow_redirects=False,
+            limits=httpx.Limits(max_connections=32, max_keepalive_connections=16),
+        )
+        _shared_base = base_url
+    return _shared_client
+
+
+async def aclose() -> None:
+    """关闭共享连接池。应用关闭时调用。"""
+    global _shared_client, _shared_base
+    if _shared_client is not None:
+        await _shared_client.aclose()
+        _shared_client = None
+        _shared_base = None
 
 
 # POST /api/conversations 的真实入参是嵌套的：
