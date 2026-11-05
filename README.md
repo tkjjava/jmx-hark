@@ -100,6 +100,10 @@ HARK_PATH_LIST_CONVERSATIONS=/api/conversations
 ## 运行
 
 ```bash
+# 先自检：验证密钥、数据库、上游可达性、端点路径
+python -m hark_bridge.doctor
+
+# 再启动
 python -m hark_bridge
 ```
 
