@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
@@ -156,7 +157,36 @@ async def chat_completions(
     model = request.model or pool.DEFAULT_MODEL
 
     if not request.stream:
-        text = await pool.collect_text(result, reply_mode=REPLY_MODE, timeout=REPLY_TIMEOUT)
+        try:
+            text = await pool.collect_text(
+                result, reply_mode=REPLY_MODE, timeout=REPLY_TIMEOUT
+            )
+        except asyncio.CancelledError:
+            # 客户端断开：不要留下半截状态，直接向上抛
+            raise
+        except Exception as exc:
+            # 超时或上游异常都应给客户端一个明确的 504，
+            # 而不是让它等满整个连接超时后收到一个空响应
+            raise HTTPException(
+                status_code=504,
+                detail={
+                    "error": "upstream_timeout",
+                    "note": f"{type(exc).__name__}: {exc}",
+                    "type": "timeout",
+                },
+            ) from exc
+
+        if not text:
+            # 投递成功但没取到正文：明确告知，别伪装成空回答
+            raise HTTPException(
+                status_code=504,
+                detail={
+                    "error": "empty_reply",
+                    "note": "已投递但未取到正文，可试 HARK_REPLY_MODE=search",
+                    "type": "empty_reply",
+                },
+            )
+
         return JSONResponse(
             {
                 "id": completion_id,
