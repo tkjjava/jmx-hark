@@ -41,15 +41,19 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: python -m pytest tests -v
 
+      # 用 ascii 转义输出：Windows runner 的 stdout 是 cp1252，
+      # 直接 print 中文会 UnicodeEncodeError
       - name: Verify package imports
-        run: python -c "import hark_bridge; print(hark_bridge.__author__, hark_bridge.__mark__)"
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -c "import hark_bridge; print(hark_bridge.__author__.encode('unicode_escape').decode(), hark_bridge.__mark__.encode('unicode_escape').decode())"
 
       # 用 Python 脚本做启动冒烟：跨平台、不依赖 bash 的后台任务控制，
       # 失败时能看到实际返回值而不是只有 curl 的退出码。
       - name: Smoke test server startup
         env:
           PYTHONIOENCODING: utf-8
-          HARK_BRIDGE_KEY: "Yk1vR3g5dExhM3BXNnFSc1Q5dUMyeVphNGJDNWRFRmdoSTBrTG1Ob1BxUT0="
+          HARK_BRIDGE_KEY: "C1IQcjvmR1TGXTXrsT1z12eWb4Z6jLqXtqmZ-QBZ5Gs="
           HARK_BRIDGE_DB: "./ci-smoke.db"
           HARK_BRIDGE_PORT: "18787"
         run: python -m hark_bridge.smoke

@@ -10,6 +10,7 @@ CI 用这个代替 shell 里的后台进程控制——跨平台，且失败时�
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
@@ -21,6 +22,20 @@ PORT = int(os.environ.get("HARK_BRIDGE_PORT", "18787"))
 BASE = f"http://127.0.0.1:{PORT}"
 TIMEOUT_SECONDS = 40.0
 INTERVAL = 0.5
+
+
+def ensure_utf8_stdout() -> None:
+    """把 stdout/stderr 切到 UTF-8。
+
+    GitHub Actions 的 windows-latest 上，Python 的 stdout 是 cp1252。
+    本项目的作者署名是中文，任何 print 都会抛 UnicodeEncodeError 让构建挂掉。
+    这不是理论问题——CI 第一次跑就是这么失败的。
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(ValueError, OSError):
+                reconfigure(encoding="utf-8", errors="replace")
 
 
 def _get(path: str) -> dict:
@@ -45,6 +60,8 @@ def wait_until_ready() -> bool:
 
 
 def main() -> int:
+    ensure_utf8_stdout()
+
     # 延迟导入，让 --help 之类的调用不必加载整个应用
     import uvicorn
 
