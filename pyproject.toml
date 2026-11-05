@@ -9,7 +9,7 @@ description = "把 Hark 账号池暴露成 OpenAI 兼容接口（不含注册环
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "君莫笑" }]
+authors = [{ name = "tkjjava", email = "tkjjava@gmail.com" }]
 keywords = ["openai", "api-bridge", "hark", "llm", "永恒之兰"]
 classifiers = [
     "Programming Language :: Python :: 3",
