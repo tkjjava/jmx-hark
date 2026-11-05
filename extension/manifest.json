@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "hark-bridge 会话导入",
+  "version": "0.1.0",
+  "description": "把 hark.com 的登录会话导入本机 hark-bridge 服务",
+  "author": "君莫笑",
+  "permissions": ["cookies", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://hark.com/*",
+    "https://*.hark.com/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "导入会话到 hark-bridge"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

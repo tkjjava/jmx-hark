@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hark-bridge"
+version = "0.1.0"
+description = "把 Hark 账号池暴露成 OpenAI 兼容接口（不含注册环节）"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "君莫笑" }]
+keywords = ["openai", "api-bridge", "hark", "llm", "永恒之兰"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "httpx>=0.27",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "cryptography>=42",
+    "pydantic>=2.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/junmoxiao/hark-bridge"
+
+[project.scripts]
+hark-bridge = "hark_bridge.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["hark_bridge*"]

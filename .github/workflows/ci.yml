@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest pytest-asyncio ruff
+
+      - name: Lint
+        run: ruff check hark_bridge tests
+
+      - name: Check formatting
+        run: ruff format --check hark_bridge tests
+
+      - name: Run tests
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -m pytest tests -v
+
+      - name: Verify package imports
+        run: python -c "import hark_bridge; print(hark_bridge.__author__, hark_bridge.__mark__)"
+
+      - name: Verify server starts
+        env:
+          HARK_BRIDGE_KEY: "Yk1vR3g5dExhM3BXNnFSc1Q5dUMyeVphNGJDNWRFRmdoSTBrTG1Ob1BxUT0="
+          HARK_BRIDGE_DB: "./ci-test.db"
+        run: |
+          python -m hark_bridge &
+          sleep 8
+          curl -fsS http://127.0.0.1:8787/healthz
+          kill %1
+        shell: bash
